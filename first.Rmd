@@ -1,0 +1,88 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-03-04"
+---
+
+```{r setup, include=FALSE}
+```
+
+```{r}
+# Get and print current working directory.
+print(getwd())
+```
+```{r}
+# Set current working directory.
+setwd("C:/Users/sizah/Downloads/DA/RProject")
+```
+
+
+```{r}
+attributes(irisDataset)
+```
+```{r}
+summary(irisDataset)
+```
+
+
+```{r}
+irisDataset<- read.csv("iris.csv ")
+```
+
+
+```{r}
+plot(irisDataset$sepal.width)
+```
+
+```{r}
+qqnorm(irisDataset$sepal.length)
+```
+
+```{r}
+head(irisDataset)
+```
+```{r}
+library(ggplot2)
+ggplot(data = irisDataset, aes(x=petal.width, y = petal.length))+
+  geom_smooth()
+```
+```{r}
+irisDataset$variety <- as.numeric(as.factor(irisDataset$variety))
+```
+
+```{r}
+hist(irisDataset$variety)
+```
+```{r}
+irisDataset$variety <- as.factor(as.numeric(irisDataset$variety))
+```
+
+```{r}
+irisDataset$variety <- as.character(irisDataset$variety)
+
+```
+
+```{r}
+print(table(irisDataset$variety))
+```
+```{r}
+# Define a named vector for mapping
+factor_to_character <- c("1" = "Setosa", "2" = "Versicolor", "3" = "Virginica")
+
+# Replace numeric values with corresponding words
+irisDataset$variety <- factor_to_character[as.character(irisDataset$variety)]
+
+```
+
+
+```{r}
+ggplot(data = irisDataset, mapping = aes(x = variety, y = petal.length)) +
+  geom_boxplot() +
+ scale_x_discrete(guide = guide_axis(angle = 90)) +
+  NULL
+```
+how to make a new copy of a dataset in R
+```{r}
+new_irisDataset <- irisDataset
+
+```

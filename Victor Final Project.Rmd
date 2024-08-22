@@ -1,0 +1,336 @@
+---
+title: "PROJECT"
+author: "SizahVick"
+date: "2024-05-10"
+output:
+  html_document:
+    highlight: tango
+    theme: cosmo
+    toc: yes
+    toc_float: TRUE
+    toc_depth: 4
+    code_folding: hide
+  slidy_presentation:
+    highlight: tango
+goal: 'CUSTOMER SPENDING BEHAVIOR ANALYSIS '
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**LOADING LIBRARIES**
+```{r warning=FALSE, message=FALSE, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(randomForest)
+
+```
+
+# Introduction
+
+**This report presents an analysis of the Demographic Data, focusing on various aspects such as data preparation, data visualization, and model building.**
+
+**The primary goal is to understand customer spending behavior, detect any potential issues like missing values and duplicates, and build predictive models to derive insights.**
+
+# DATA Description
+ **LOADING MY DATA Demographic_Data.csv, I OBSERVED THAT THE FILE CONSIST OF 80000 OBJECTS AND 5 VARIABLES IN WHICH THREE (3) OF THE VARIABLES ARE NUMERICAL (AGE, ITEMS AND AMOUNT) AND THE REMAINING TWO (2) VARIABLES ARE CATEGORICAL (IN.STORE AND REGION). **
+
+## Loading the Data
+```{r}
+Demographic_Data<- read.csv("Demographic_Data.csv")
+```
+
+**Summary Statistics**
+```{r}
+summary(Demographic_Data)
+```
+
+**LOADING THE FUNCTION STR IT DISPLAYS THE STRUCTURE OF MY DATA SET**
+```{r}
+str(Demographic_Data)
+```
+
+
+```{r}
+Demographic_Data_A <- Demographic_Data
+Demographic_Data_B <- Demographic_Data
+new_Demographic_Data <- Demographic_Data
+```
+
+```{r}
+str(new_Demographic_Data)
+```
+
+
+# DATA PREPARATION
+
+## Checking missing values in all attributes
+```{r}
+missing_values <- colSums(is.na(new_Demographic_Data))
+print(missing_values)
+```
+**There are no MISSING VALUES in the data set**
+
+## Checking for outliers
+```{r}
+boxplot(new_Demographic_Data$age, main = "Boxplot of Age")
+boxplot(new_Demographic_Data$items, main = "Boxplot of Items")
+boxplot(new_Demographic_Data$amount, main = "Boxplot of Amount")
+```
+**I OBSERVED THAT THERE ARE OUTLINERS IN MY DATA SET**
+
+```{r}
+summary(new_Demographic_Data)
+```
+
+
+## Checking for duplicates
+```{r}
+Duplicates <- any(duplicated(new_Demographic_Data))
+
+if (Duplicates) {
+  print("The dataframe contains duplicates.")
+} else {
+  print("The dataframe does not contain duplicates.")
+}
+```
+
+
+```{r}
+Duplicates <- new_Demographic_Data[duplicated(new_Demographic_Data), ] 
+print (Duplicates)
+```
+**I OBSERVED THAT THERE ARE DUPLICATES IN MY DATA SET**
+
+```{r}
+#Removing duplicates
+new_Demographic_Data <- new_Demographic_Data %>%
+  distinct()
+Demographic_Data_A <- new_Demographic_Data %>%
+  distinct()
+Demographic_Data_B <- new_Demographic_Data %>%
+  distinct()
+```
+
+
+## DATA TRANSFORMATION
+
+**CONVERTING NUMERIC DATA COLUMN INTO CATEGORICAL DATA (The in.store and region columns are converted to factors.)**
+```{r}
+new_Demographic_Data$in.store <- as.factor(new_Demographic_Data$in.store)
+new_Demographic_Data$region <- as.factor(new_Demographic_Data$region)
+
+```
+
+```{r}
+# Checking the converted column
+str(new_Demographic_Data$in.store)  
+str(new_Demographic_Data$region) 
+```
+
+**MAPPING ALL THE CATEGORICAL VARIABLES**
+```{r}
+# Define a named vector for mapping
+factor_to_instore <- c("0" = "Online purchases", "1" = "In-store purchases")
+# Replace numeric values with corresponding words
+new_Demographic_Data$in.store <- factor_to_instore[as.character(new_Demographic_Data$in.store)]
+```
+
+```{r}
+factor_to_region <- c("1" = "North", "2" =	"South", "3" =	"East", "4" =	"West")
+new_Demographic_Data$region <- factor_to_region[as.character(new_Demographic_Data$region)]
+```
+
+#DATA ANALYSIS
+
+# 1
+**Customers' Spending by Region**
+**Customers in different regions that spend more per transaction**
+```{r}
+# Calculating Average Transaction Amount by Region
+avg_transaction_by_region <- aggregate(amount ~ region, data = new_Demographic_Data, FUN = mean)
+print(avg_transaction_by_region)
+```
+
+**Regions that spend the most and least**
+```{r}
+# Identifying Regions with Highest and Lowest Spending
+region_with_highest_spending <- avg_transaction_by_region[which.max(avg_transaction_by_region$amount), ]
+region_with_lowest_spending <- avg_transaction_by_region[which.min(avg_transaction_by_region$amount), ]
+
+print(paste("Region with highest spending:", region_with_highest_spending$region, "-> ($", round(region_with_highest_spending$amount, 2), ")"))
+print(paste("Region with lowest spending:", region_with_lowest_spending$region, "-> ($", round(region_with_lowest_spending$amount, 2), ")"))
+```
+
+
+
+
+**DATA VISUALIZATION**
+
+**1**
+```{r}
+# Bar plot
+barplot(avg_transaction_by_region$amount, names.arg = avg_transaction_by_region$region,
+        xlab = "Region", ylab = "Average Transaction Amount", main = "Average Transaction Amount by Region")
+
+```
+
+
+# 2
+**Regression Analysis**
+```{r}
+# Step 1: Fit a Regression Model
+model <- lm(amount ~ items, data = new_Demographic_Data)
+
+# Step 2: Assess Model Fit
+summary(model)  # View summary statistics of the regression model
+
+# Step 3: Interpret Model Coefficients
+coef(model)  # View coefficients of the regression model
+
+```
+**The analysis shows that there is no significant relationship between the number of items purchased and the amount spent. The p-value (0.917) and the near-zero R-squared value indicate that the number of items bought does not meaningfully impact the transaction amount. The data does not support a relationship between the number of items purchased and how much is spent.**
+**The analysis shows no significant relationship between the number of items purchased and the amount spent.**
+
+
+# 3
+**Age Distribution by Region**
+**Differences in Age by Region**
+```{r}
+# Summary statistics: mean age by region
+summary_by_region <- aggregate(age ~ region, data = new_Demographic_Data, FUN = mean)
+summary_by_region
+
+```
+**This show that there are differences in the age of customers between regions with the South region having the highest** 
+
+**DATA VISUALIZATION**
+
+**2**
+```{r}
+# Bar plot of mean age by region
+barplot(summary_by_region$age, names.arg = summary_by_region$region,
+        xlab = "Region", ylab = "Mean Age", main = "Mean Age by Region", col = "skyblue")
+
+# Box plot
+boxplot(age ~ region, data = new_Demographic_Data,
+        xlab = "Region", ylab = "Age", main = "Age Distribution by Region")
+
+# Violin plot
+library(ggplot2)
+ggplot(new_Demographic_Data, aes(x = region, y = age)) +
+  geom_violin(trim = FALSE) +
+  xlab("Region") +
+  ylab("Age") +
+  ggtitle("Age Distribution by Region")
+```
+
+
+```{r}
+#Analysis_of_Variance_result <- aov(age ~ region, data = new_Demographic_Data)
+#summary(Analysis_of_Variance_result)
+```
+
+**Predict Customer Age Based on Demographic Data**
+```{r}
+# Fit a linear regression model
+model <- lm(age ~ region, data = new_Demographic_Data)
+summary(model)
+
+# Predict age using the model
+predicted_age <- predict(model, newdata = new_Demographic_Data)
+new_Demographic_Data$predicted_age <- predicted_age
+```
+
+# 4
+## Correlation Between Age and Transaction Type
+```{r}
+# Calculate correlation between Age and Transaction_Type(in-store or online)
+correlation_age_transaction_type <- cor(Demographic_Data$age, Demographic_Data$in.store)
+print(paste("Correlation between Age and Transaction Type:", correlation_age_transaction_type))
+```
+**The correlation coefficient value of -0.178 is relatively small in magnitude. Correlation coefficients range from -1 to 1, where values closer to -1 or 1 indicate stronger relationships, and values closer to 0 indicate weaker relationships. In this case, the value is close to 0, suggesting a weak correlation.**
+**The negative sign indicates that there is an inverse relationship between age and the likelihood of a transaction being made online. Specifically, as age increases, the likelihood of making an online purchase decreases slightly, and vice versa.**
+
+
+```{r}
+#Changing data type
+Demographic_Data_A$in.store <- as.factor(Demographic_Data_A$in.store)
+Demographic_Data_A$age <- as.numeric(Demographic_Data_A$age)
+Demographic_Data_A$amount <- as.numeric(Demographic_Data_A$amount)
+```
+
+## Box Plot Visualizations
+```{r}
+# Box plot of Age by Transaction Type
+ggplot(Demographic_Data_A, aes(x = in.store, y = age)) +
+  geom_boxplot() +
+  xlab("Transaction Type") +
+  ylab("Age") +
+  ggtitle("Age Distribution by Transaction Type")
+
+# Box plot of Transaction Amount by Transaction Type
+ggplot(Demographic_Data_A, aes(x = in.store, y = amount)) +
+  geom_boxplot() +
+  xlab("Transaction Type") +
+  ylab("Transaction Amount") +
+  ggtitle("Transaction Amount by Transaction Type")
+```
+
+# 5
+
+## Model Building and Evaluation
+
+**Preparing the Data**
+```{r}
+# Ensuring the 'Region' column is a factor
+Demographic_Data_B$region <- as.factor(Demographic_Data_B$region)
+
+# Handling missing values (if any)
+Demographic_Data_B <- na.omit(Demographic_Data_B)
+
+# Encoding categorical variables 
+Demographic_Data_B$in.store <- as.factor(Demographic_Data_B$in.store)
+
+```
+
+**Splitting the Data**
+```{r}
+# Splitting the Data into Training and Testing Sets
+set.seed(123) # for reproducibility
+trainIndex <- createDataPartition(Demographic_Data_B$region, p = 0.8, list = FALSE)
+trainData <- Demographic_Data_B[trainIndex,]
+testData <- Demographic_Data_B[-trainIndex,]
+```
+
+**Training the Model**
+```{r}
+# Training a Random Forest Model
+model <- randomForest(region ~ ., data = trainData)
+```
+
+**Evaluating the Model**
+```{r}
+#Evaluating the Model
+predictions <- predict(model, newdata = testData)
+confusionMatrix(predictions, testData$region)
+```
+
+**Predicting on New Data**
+```{r}
+new_data_predictions <- predict(model, newdata = Demographic_Data_B)
+# View the predicted values
+
+```
+
+```{r}
+# Add predictions as a new column in the Demographic_Data_B dataframe
+Demographic_Data_B$Predicted_Region <- new_data_predictions
+
+# View the updated dataframe with predictions
+head(Demographic_Data_B)
+```
+
+

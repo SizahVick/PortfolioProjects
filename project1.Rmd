@@ -1,0 +1,598 @@
+---
+title: "CUSTOMER BRAND PREFERNCE"
+author: "Victor Sizah"
+goal: "PREDICTING CUSTOMER BRAND PREFERENCE"
+date: "2024-03-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+```{r warning=FALSE, message=FALSE, include=FALSE}
+library(knitr)
+library(lattice)
+library(ggplot2)
+library(caret)
+library(pls)
+library(dplyr)
+library(tidyr)
+library(kernlab)
+library(plotly)
+library(stats)
+library(formattable)
+```
+
+# INTRODUCTION
+
+**GOALS OF THE PROJECT**
+  The goal of this project is to predict the most preferred brand
+  
+**THE VARIOUS HYPOTHESIS FORMULATED INCLUDE:**
+  1.Individuals with higher levels of education like Master's, Doctoral, or Professional     Degree, might have higher salaries compared to those with lower levels of education.
+  2.Individuals with higher incomes might be more likely to own luxury car brands like        Mercedes Benz or Cadillac.
+  3.Older individuals might have higher credit scores due to longer credit histories and        more stable financial situations.
+  4.Older individuals might have higher salaries due to more experience and higher             positions in their careers.
+
+# CHAPTER 2
+
+  **DATA DESCRIPTION**
+```{r}
+My_Data <- read.csv("CompleteResponses.csv ")
+```
+
+```{r}
+summary(My_Data)
+```
+```{r}
+new_My_Data <- My_Data
+```
+
+```{r}
+str(new_My_Data)
+```
+**Checking datatypes**
+```{r}
+elevel <- new_My_Data$elevel
+
+if (is.numeric(elevel)) {
+  print("The column is numeric.")
+} else if (is.factor(elevel)) {
+  print("The column is a factor.")
+} else {
+  print("The column is neither numeric nor a factor.")
+}
+```
+
+**CONVERTING NUMERIC DATA COLUMN INTO CATEGORICAL DATA**
+```{r}
+new_My_Data$elevel <- as.factor(new_My_Data$elevel)
+new_My_Data$car <- as.factor(new_My_Data$car)
+new_My_Data$zipcode <- as.factor(new_My_Data$zipcode)
+new_My_Data$brand <- as.factor(new_My_Data$brand)
+
+# Checking the converted column
+str(new_My_Data$elevel)  
+str(new_My_Data$car) 
+str(new_My_Data$zipcode) 
+str(new_My_Data$brand) 
+
+```
+
+**MAPPING ALL THE CATEGORICAL VARIABLES**
+```{r}
+# Define a named vector for mapping
+factor_to_elevel <- c("0" = "Less than High School Degree", "1" = "High School Degree", "2" = "Some College", "3" = "4-year College degree", "4" = "Master's, Doctoral or Professional Degree")
+
+# Replace numeric values with corresponding words
+new_My_Data$elevel <- factor_to_elevel[as.character(new_My_Data$elevel)]
+```
+
+```{r}
+factor_to_car <- c("1" = "BMW", "2" =	"Buick", "3" =	"Cadillac", "4" =	"Chevrolet", "5"	= "Chrysler", "6"	= "Dodge", "7" =	"Ford", "8"	= "Honda", "9" =	"Hyundai", "10" = "Jeep", "11" =	"Kia", "12" =	"Lincoln", "13"	= "Mazda", "14"	= "Mercedes Benz", "15"	= "Mitsubishi", "16" =	"Nissan", "17"	= "Ram", "18" =	"Subaru", "19" =	"Toyota", "20" = "None of the above")
+new_My_Data$car <- factor_to_car[as.character(new_My_Data$car)]
+```
+
+```{r}
+factor_to_zipcode <- c("0" = "New England", "1" =	"Mid-Atlantic", "2" =	"East North Central", "3" =	"West North Central", "4" =	"South Atlantic", "5" =	"East South Central", "6" =	"West South Central", "7" =	"Mountain", "8" =	"Pacific")
+new_My_Data$zipcode <- factor_to_zipcode[as.character(new_My_Data$zipcode)]
+```
+
+```{r}
+factor_to_brand <- c("0" = "Acer", "1"	= "Sony")
+new_My_Data$brand <- factor_to_brand[as.character(new_My_Data$brand)]
+```
+```{r}
+new_My_Data$brand <- as.factor(new_My_Data$brand)
+```
+
+
+
+```{r}
+summary(new_My_Data)
+```
+# Data Preparation
+
+**check missing values in all attributes**
+
+```{r}
+missing_values <- colSums(is.na(new_My_Data))
+print(missing_values)
+```
+There are no MISSING VALUES in our data set
+
+
+**Checking for outliers (using a box plot and its only used for numeric datatype)**
+
+```{r}
+boxplot(new_My_Data$salary, main = "Boxplot of Salary")
+boxplot(new_My_Data$age, main = "Boxplot of Age")
+boxplot(new_My_Data$credit, main = "Boxplot of Credit")
+```
+There are no OUTLIERS in the dataset
+
+**FEATURE ENGINEERING**
+creating a new variable age-range using the age attribute(feature engineering)(research on data rangling )
+
+```{r}
+new_My_Data$age_range <- cut(new_My_Data$age, breaks = c(0, 18, 30, 50, 100), labels = c("0-18", "19-30", "31-50", "51-100"))
+```
+
+
+**Checking for inconsistences in the data**
+
+```{r}
+summary(new_My_Data)
+```
+
+
+**Renaming the column to suit what they represent (elevel= educational_level, credit= amount_credit)**
+
+```{r}
+names(new_My_Data)[names(new_My_Data) == "elevel"] <- "educational_level"
+names(new_My_Data)[names(new_My_Data) == "credit"] <- "amount_credit"
+
+```
+
+
+**checking for duplicate**
+
+```{r}
+Duplicates <- any(duplicated(new_My_Data))
+
+if (Duplicates) {
+  print("The dataframe contains duplicates.")
+} else {
+  print("The dataframe does not contain duplicates.")
+}
+
+```
+```{r}
+Duplicates <- new_My_Data[duplicated(new_My_Data), ] 
+print (Duplicates)
+```
+
+I OBSERVED THAT THERE IS NOT DUPLICATE
+
+**checking for zero variance**
+
+```{r}
+salary <- new_My_Data$salary
+
+if (var(salary) == 0) {
+  print("The column has zero variance (all values are the same).")
+} else {
+  print("The column does not have zero variance.")
+}
+```
+```{r}
+age <- new_My_Data$age
+
+if (var(age) == 0) {
+  print("The column has zero variance (all values are the same).")
+} else {
+  print("The column does not have zero variance.")
+}
+```
+
+```{r}
+amount_credit <- new_My_Data$amount_credit
+
+if (var(amount_credit) == 0) {
+  print("The column has zero variance (all values are the same).")
+} else {
+  print("The column does not have zero variance.")
+}
+```
+```{r}
+brand <- My_Data$brand
+variance <- apply(My_Data, 2, var)
+
+if (var(brand) == 0) {
+  print("The column has zero variance (all values are the same).")
+} else {
+  print("The column does not have zero variance.")
+}
+```
+**correlation matrix**
+
+```{r}
+correlation_matrix <- cor(My_Data)
+print(correlation_matrix)
+```
+
+
+
+# EDA
+
+# UNIVARIANT ANALYSIS
+
+
+**Histogram distribution of Salary**
+```{r}
+ggplot(new_My_Data, aes(x=salary)) + geom_histogram(color="darkblue", fill="lightblue", bin=20) +labs(x = "Salary Earned", title = "A Histogram of salary", subtitle = "Showing Salary with 20 Bins",
+ caption ="Salary- Count",                                                                                  alt = "salary- Count in frequency")
+```
+
+
+**Histogram distribution of Brand**
+```{r}
+ggplot(My_Data, aes(x=brand)) + geom_histogram(color="darkblue", fill="lightblue") +labs(x = "Brand", title = "A Histogram of Brand", subtitle = "",
+ caption ="brand- Count",                                                                                  alt = "salary- Count in frequency")
+```
+
+# BIVARIANT
+
+**Distribution between educational_level and Salary**
+```{r}
+plot1 <- ggplot(new_My_Data, aes(salary, educational_level))
+plot1 + geom_col()
+```
+
+**Distribution between Salary and Car**
+```{r}
+plot1 <- ggplot(new_My_Data, aes(salary, car))
+plot1 + geom_col()
+```
+
+
+```{r}
+cq <-ggplot(new_My_Data, aes(age))
+cq +geom_area(stat= "bin")
+```
+
+```{r}
+cq +geom_density(kernel= "gaussian")
+```
+
+```{r}
+cq +geom_freqpoly(kernel= "gaussian")
+```
+
+```{r}
+cq +geom_histogram(binwidth = 5)
+```
+```{r}
+cr <- ggplot(new_My_Data)
+cr +geom_qq(aes(sample = age))
+```
+
+**Density plot of salary**
+```{r}
+c1 <-ggplot(new_My_Data, aes(salary))
+c1+geom_density(kernel= "gaussian")
+```
+**Density plot of Age**
+```{r}
+c2 <-ggplot(new_My_Data, aes(age))
+c2+geom_density(kernel= "gaussian")
+```
+```{r}
+c1 <-ggplot(new_My_Data, aes(amount_credit))
+c1+geom_density(kernel= "gaussian")
+```
+
+**A linear regression model developed to predict salary based on age, educational level, car ownership, zipcode, credit score, and brand**
+```{r}
+model <- lm(salary ~ age + elevel + car + zipcode + credit + brand, data = My_Data)
+# View summary of the regression model
+summary(model)
+
+```
+**Bar plot illustrates the distribution of brands in the dataset.**
+```{r}
+d <- ggplot(new_My_Data, aes(brand))
+d + geom_bar()
+```
+
+**Bar plot illustrates the distribution of education_level in the dataset.**
+```{r}
+d1 <- ggplot(new_My_Data, aes(educational_level))
+d1 + geom_bar() + coord_flip()
+```
+**Bar plot illustrates the distribution of car in the dataset.**
+```{r}
+d2 <- ggplot(new_My_Data, aes(car))
+d2 + geom_bar() + coord_flip()
+```
+
+**Jitter plot to show the distribution of salary against amount of credit**
+```{r}
+e <- ggplot(new_My_Data, aes(salary, amount_credit))
+e + geom_jitter(height = 2, width = 2) 
+```
+
+**Smooth plot to show the distribution of salary against amount of credit**
+```{r}
+e1 <- ggplot(new_My_Data, aes(salary, amount_credit))
+e1 + geom_smooth()
+```
+
+**Point plot to show the distribution of salary against age**
+```{r}
+e2 <- ggplot(new_My_Data, aes(salary, age))
+e2 + geom_point()
+```
+**Column plot to show the distribution of salary against age**
+```{r}
+f <- ggplot(new_My_Data, aes(educational_level, salary))
+f + geom_col() + coord_flip()
+```
+**Violin plot to show the distribution of salary against age**
+```{r}
+f1 <- ggplot(new_My_Data, aes( brand, salary))
+f1  + geom_violin(scale = "area")
+```
+**Histogram plot to show the relationship between salary and brand**
+```{r}
+#HISTOGRAM OF SALARY AND BRAND
+ggplot (new_My_Data, aes(x=salary, fill=brand)) +
+geom_histogram (color="black", bins=10) +
+labs (title="Relationship Between Brand and Salary") + 
+scale_x_continuous (breaks=seq(20000,150000, 15000))+
+theme (axis.text.x = element_text(angle=60, hjust=1)) +
+scale_y_continuous (labels = scales::percent)
+```
+
+# MULTIVARIANT ANALYSIS
+
+**Relationship between Age, Salary and Brand**
+```{r}
+ggplot (new_My_Data,aes (x=age, y=salary, col=brand)) +
+geom_point() +
+geom_smooth() +
+  labs( X = 'Age', Y = "Salary", title= "Multivariate Relationship between Age, salary and Brand")
+
+```
+
+**Box plot between Salary and Brand**
+```{r}
+ggplot(new_My_Data, aes(x=brand, y=salary, fill=brand)) +
+geom_boxplot()+labs(x= "salary", title = "A Boxplot of Salary and Brand",
+subtitle = "Showing salary with 20 categories", caption = "Salary to Brand",
+alt = "Salary to brand- Count in frequency")+ stat_summary(fun.y = median,
+colour="black", geom = "text", vjust= -0.7, aes(label=round(..y.., digits=
+1)))
+```
+
+**Historgram showing the relation between salary and educational level**
+```{r}
+ggplot(My_Data, aes(x=salary)) + geom_histogram(color="darkblue",
+fill="lightblue", bins=20) + facet_wrap(~elevel, scales = "free_x")
+  labs (x="salary", title = "A Histogram of salary and eductaion level",
+subtitle = "showing salary with 20 categories", caption = "salary to
+eduction level -count", alt = "salary to educational level- count in
+frequency")
+```
+
+**Splitting the data into a training set and a testing set, with 75% allocated for training, ensuring reproducibility by setting the seed.**
+```{r}
+set.seed(107)
+inTrain <- createDataPartition(y = new_My_Data$brand, p = .75, list = FALSE)
+```
+
+**Showing the structured summary of the object 'inTrain'**
+```{r}
+str(inTrain)
+```
+```{r}
+training <- new_My_Data[inTrain, ]
+```
+
+```{r}
+testing <- new_My_Data[-inTrain, ]
+```
+
+```{r}
+nrow(training)
+```
+```{r}
+nrow(testing)
+```
+**Checking for null values**
+```{r}
+#is.na(new_My_Data)
+if (any(is.na(new_My_Data))) {
+  print("There are null values in the dataset.")
+} else {
+  print("There are no null values in the dataset.")
+}
+```
+
+# TRAINING MODELS 
+
+**Initializing train control object for cross-validation resampling method**
+```{r}
+ctrl <- trainControl(method = 'cv')
+
+```
+
+
+**Training a Partial Least Squares (PLS) regression model to predict the brand variable, optimizing model performance through resampling and tuning**
+```{r}
+plsFit <- train(
+  brand ~ .,
+  data = training,
+  method = "pls",
+  #preproc = c("center", "scale"),
+  tuneLength = 15,
+  verbose = FALSE,
+  ## added:
+  trcontrol = ctrl,
+  verbosity = 0
+)
+```
+```{r}
+plsFit
+```
+**KNN**
+```{r}
+knnFit <- train(
+  brand ~ .,
+  data = training,
+  method = "knn"
+)
+```
+
+
+```{r}
+knnFit
+```
+**C5.0 MODEL**
+```{r}
+
+c5Fit <- train(
+  brand ~ .,
+  data = training,
+  method = "C5.0"
+)
+```
+
+```{r}
+c5Fit
+```
+
+**SVMLINEAR MODEL**
+```{r}
+SvmLinearFit <- train(
+  brand ~ .,
+  data = training,
+  method = "svmLinear"
+)
+```
+
+```{r}
+SvmLinearFit
+
+```
+
+**GBM MODEL**
+```{r}
+GbmFit <- train(
+  brand ~ .,
+  data = training,
+  method = "gbm"
+)
+```
+
+
+**Data validation**
+
+Predictions for the 'brand' variable using the trained C5.0 model on a test dataset.
+```{r}
+brand_predict <- predict(c5Fit, testing)
+```
+
+```{r}
+summary(brand_predict)
+```
+
+```{r}
+summary (testing$brand)
+```
+
+**confusion matrix**
+```{r}
+#creating confusion matrix
+c50_confusion_matrix_Brand <- confusionMatrix(data = brand_predict, reference = testing$brand )
+c50_confusion_matrix_Brand
+```
+
+**Resampling**
+```{r}
+#Resampling for the best performing model
+resamps_Brand <- resamples(list(Knn = knnFit, svmLinear = SvmLinearFit, c5.0 = c5Fit, gbm = GbmFit, pls = plsFit))
+summary(resamps_Brand)
+```
+
+
+The best performing model according to accuracy is C50
+
+**Tuning Grid**
+```{r warning=FALSE}
+#Define the tuning grid
+tuneGrid <- expand.grid(.trials = 20, 
+                        .model = "tree",
+                        .winnow = TRUE)
+#Train the model with parameter tuning
+c50Fit_Final <- train(
+  brand ~ .,
+  data = training,
+  method = "C5.0",
+  tuneGrid = tuneGrid,
+  trcontrol = trainControl(method = "cv", number = 5)
+)
+```
+
+**predicting brand variable using a trained C5.0 model on the testing dataset.**
+```{r}
+brand_predict <- predict(c50Fit_Final, testing)
+```
+
+
+**Showing the distribution and characteristics of the predicted brand values.**
+```{r}
+summary(brand_predict)
+```
+
+**The confusion matrix summarizes the performance of the C5.0 model by comparing predicted and actual brand values on the test dataset.**
+```{r}
+c50_confusion_matrix_Brand <- confusionMatrix(data = brand_predict, reference = testing$brand )
+c50_confusion_matrix_Brand
+```
+
+**Loading new_Survey_Data**
+```{r}
+load(file= "C:/Users/sizah/Downloads/DA/RProject/new_Survey_Data.rdata")
+```
+
+
+```{r}
+test_predict <- predict(c50Fit_Final, new_Survey_Data)
+```
+
+```{r}
+summary(test_predict)
+```
+
+```{r}
+new_Survey_Data <- cbind(new_Survey_Data, test_predict)
+```
+
+**LOADING DATA FILE INTO ENVIRONMENT**
+```{r}
+load(file= "C:/Users/sizah/Downloads/DA/RProject/new_Survey_Data_Brand.rdata")
+```
+
+**Adding a new column containing brand data to the new_survey_Data dataset.**
+```{r}
+new_Survey_Data <- cbind(new_Survey_Data, new_Survey_Data_Brand$brand)
+```
+
+**The bar plot illustrates the distribution of 'test_predict' levels in the dataset.**
+```{r}
+d <- ggplot(new_Survey_Data_Brand, aes(test_predict))
+d + geom_bar()
+```
+

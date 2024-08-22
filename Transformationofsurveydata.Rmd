@@ -1,0 +1,134 @@
+---
+title: "Survey2"
+author: "SizahVick"
+date: "2024-04-28"
+output: html_document
+---
+
+```{r}
+Survey_Data <- read.csv("SurveyIncomplete.csv ")
+```
+
+```{r}
+new_Survey_Data <- Survey_Data
+```
+
+```{r}
+new_Survey_Data$elevel <- as.factor(new_Survey_Data$elevel)
+new_Survey_Data$car <- as.factor(new_Survey_Data$car)
+new_Survey_Data$zipcode <- as.factor(new_Survey_Data$zipcode)
+new_Survey_Data$brand <- as.factor(new_Survey_Data$brand)
+
+str(new_Survey_Data$elevel) 
+str(new_Survey_Data$car) 
+str(new_Survey_Data$zipcode) 
+str(new_Survey_Data$brand) 
+```
+
+```{r}
+factor_to_elevel <- c("0" = "Less than High School Degree", "1" = "High School Degree", "2" = "Some College", "3" = "4-year College degree", "4" = "Master's, Doctoral or Professional Degree")
+
+new_Survey_Data$elevel <- factor_to_elevel[as.character(new_Survey_Data$elevel)]
+```
+
+```{r}
+factor_to_car <- c("1" = "BMW", "2" =	"Buick", "3" =	"Cadillac", "4" =	"Chevrolet", "5"	= "Chrysler", "6"	= "Dodge", "7" =	"Ford", "8"	= "Honda", "9" =	"Hyundai", "10" = "Jeep", "11" =	"Kia", "12" =	"Lincoln", "13"	= "Mazda", "14"	= "Mercedes Benz", "15"	= "Mitsubishi", "16" =	"Nissan", "17"	= "Ram", "18" =	"Subaru", "19" =	"Toyota", "20" = "None of the above")
+new_Survey_Data$car <- factor_to_car[as.character(new_Survey_Data$car)]
+```
+
+```{r}
+factor_to_zipcode <- c("0" = "New England", "1" =	"Mid-Atlantic", "2" =	"East North Central", "3" =	"West North Central", "4" =	"South Atlantic", "5" =	"East South Central", "6" =	"West South Central", "7" =	"Mountain", "8" =	"Pacific")
+new_Survey_Data$zipcode <- factor_to_zipcode[as.character(new_Survey_Data$zipcode)]
+```
+
+```{r}
+factor_to_brand <- c("0" = "Acer", "1"	= "Sony")
+new_Survey_Data$brand <- factor_to_brand[as.character(new_Survey_Data$brand)]
+```
+
+```{r}
+new_Survey_Data$brand <- as.factor(new_Survey_Data$brand)
+```
+
+```{r}
+summary(new_Survey_Data)
+```
+
+```{r}
+missing_values <- colSums(is.na(new_Survey_Data))
+print(missing_values)
+```
+
+```{r}
+names(new_Survey_Data)[names(new_Survey_Data) == "elevel"] <- "educational_level"
+names(new_Survey_Data)[names(new_Survey_Data) == "credit"] <- "amount_credit"
+```
+
+```{r}
+new_Survey_Data$age_range <- cut(new_Survey_Data$age, breaks = c(0, 18, 30, 50, 100), labels = c("0-18", "19-30", "31-50", "51-100"))
+```
+
+```{r}
+boxplot(new_Survey_Data$salary, main = "Boxplot of Salary")
+boxplot(new_Survey_Data$age, main = "Boxplot of Age")
+#boxplot(new_Survey_Data$credit, main = "Boxplot of Credit")
+```
+
+```{r}
+Duplicates <- any(duplicated(new_Survey_Data))
+
+if (Duplicates) {
+  print("The dataframe contains duplicates.")
+} else {
+  print("The dataframe does not contain duplicates.")
+}
+```
+
+```{r}
+salary <- new_Survey_Data$salary
+
+if (var(salary) == 0) {
+  print("The column has zero variance (all values are the same).")
+} else {
+  print("The column does not have zero variance.")
+}
+```
+
+```{r}
+age <- new_Survey_Data$age
+if (var(age) == 0) {
+  print("The column has zero variance (all values are the same).")
+} else {
+  print("The column does not have zero variance.")
+}
+```
+
+```{r}
+#credit <- new_Survey_Data$credit
+#if (var(credit) == 0) {
+#  print("The column has zero variance (all values are the same).")
+#} else {
+ # print("The column does not have zero variance.")
+#}
+```
+
+```{r}
+new_Survey_Data_Brand <- new_Survey_Data
+```
+
+```{r}
+#new_Survey_Data <- subset(new_Survey_Data, select = brand)
+new_Survey_Data <- new_Survey_Data[, !names(new_Survey_Data) %in% c("brand")]
+```
+
+```{r}
+save(new_Survey_Data, file = "new_Survey_Data.rdata")
+```
+
+```{r}
+save(new_Survey_Data_Brand, file = "new_Survey_Data_Brand.rdata")
+```
+
+```{r}
+getwd()
+```
